@@ -58,10 +58,13 @@ export class LlmService {
     this.tools = tools
     this.logger.debug(`*** TOOLS: ${JSON.stringify(tools, null, 2)}`)
 
-    if (tools.length && (provider === 'openai' || provider === 'anthropic')) {
+    const hasCustomBaseUrl = !!this.config.get<string>('appConfig.openaiBaseUrl')
+    if (tools.length && (provider === 'openai' || provider === 'anthropic') && !hasCustomBaseUrl) {
       this.setupToolAgent(tools)
         .then(() => this.logger.log(`Tool-enabled agent initialised with ${tools.length} tools.`))
         .catch((err) => this.logger.error(`Failed to build Tool agent: ${err}`))
+    } else if (hasCustomBaseUrl) {
+      this.logger.log('Custom base URL detected (e.g. OpenRouter) — disabling tool agent for compatibility.')
     } else if (provider === 'ollama') {
       this.logger.warn('Ollama does not support tools. Only plain prompts will be used.')
     } else {
@@ -182,13 +185,26 @@ export class LlmService {
           model: this.config.get<string>('appConfig.ollamaModel') ?? 'llama3',
         })
       case 'openai':
-      default:
-        return new ChatOpenAI({
+      default: {
+        const openaiConfig: Record<string, unknown> = {
           openAIApiKey: this.getOrThrow('OPENAI_API_KEY'),
           model: this.config.get<string>('appConfig.openaiModel') ?? 'gpt-4o',
           temperature: this.config.get<number>('appConfig.openaiTemperature'),
           maxTokens: this.config.get<number>('appConfig.openaiMaxTokens'),
-        })
+        }
+        const baseUrl = this.config.get<string>('appConfig.openaiBaseUrl')
+        if (baseUrl) {
+          openaiConfig.configuration = {
+            baseURL: baseUrl,
+            defaultHeaders: {
+              'HTTP-Referer': 'https://hologram.zone',
+              'X-Title': 'Hologram Twitter Bot',
+            },
+          }
+          this.logger.log(`Using custom OpenAI base URL: ${baseUrl}`)
+        }
+        return new ChatOpenAI(openaiConfig as ConstructorParameters<typeof ChatOpenAI>[0])
+      }
     }
   }
 

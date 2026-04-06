@@ -216,6 +216,17 @@ export default registerAs('appConfig', () => ({
    */
   statisticsTool: statisticsToolConfig,
 
+  // OpenAI / OpenRouter base URL override
+  openaiBaseUrl: process.env.OPENAI_BASE_URL || '',
+
+  // Twitter API Settings
+  twitterAppKey: process.env.TWITTER_APP_KEY || '',
+  twitterAppSecret: process.env.TWITTER_APP_SECRET || '',
+  twitterAccessToken: process.env.TWITTER_ACCESS_TOKEN || '',
+  twitterAccessSecret: process.env.TWITTER_ACCESS_SECRET || '',
+  twitterHandle: process.env.TWITTER_HANDLE || '',
+  dailyPostBudget: process.env.DAILY_POST_BUDGET || '17',
+
   /**
    * Maximum size (in characters or tokens) for each document chunk when splitting documents
    * for Retrieval-Augmented Generation (RAG) processing.

@@ -9,6 +9,7 @@ import appConfig from './config/app.config'
 import { CoreService } from './core/core.service'
 import { CoreModule } from './core/core.module'
 import { MemoryModule } from './memory/memory.module'
+import { TwitterModule } from './twitter/twitter.module'
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { MemoryModule } from './memory/memory.module'
     LlmModule,
     RagModule,
     IntegrationsModule,
+    TwitterModule,
     EventsModule.register({
       modules: {
         messages: true,
@@ -40,7 +42,7 @@ import { MemoryModule } from './memory/memory.module'
         },
         eventHandler: CoreService,
         url: process.env.VS_AGENT_ADMIN_URL,
-        imports: [ChatbotModule, MemoryModule],
+        imports: [ChatbotModule, MemoryModule, TwitterModule],
       },
     }),
   ],

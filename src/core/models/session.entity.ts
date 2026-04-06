@@ -1,4 +1,3 @@
-// session.entity.ts
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm'
 import { StateStep } from '../common'
 
@@ -30,4 +29,11 @@ export class SessionEntity {
 
   @Column({ nullable: true })
   userName?: string
+
+  @Column({ type: 'jsonb', nullable: true })
+  draftContext?: {
+    drafts: string[]
+    topic: string
+    selectedDraft?: number
+  }
 }

@@ -1,15 +1,15 @@
 export const DEFAULT_CHATBOT_WELCOME_TEMPLATES: Record<string, () => string> = {
   en: () =>
-    `Hi there! 👋 I'm Holo, your smart assistant here at Hologram. I'm here to help you explore everything Verana and Hologram have to offer.`,
+    `Welcome to the Hologram Twitter Manager!\nI help you compose, review, and publish tweets.\n\nTap "Compose Tweet" to get started, or send me a topic directly.`,
 
   es: () =>
-    `¡Hola! 👋 Soy Holo, tu asistente inteligente en Hologram. Estoy aquí para ayudarte a descubrir todo lo que ofrecen Verana y Hologram.`,
+    `¡Bienvenido al gestor de Twitter Hologram!\nTe ayudo a redactar, revisar y publicar tweets.\n\nToca "Componer Tweet" para empezar, o envíame un tema.`,
 
   fr: () =>
-    `Bonjour ! 👋 Je suis Holo, votre assistant intelligent sur Hologram. Je suis là pour vous aider à découvrir tout ce que Verana et Hologram ont à offrir.`,
+    `Bienvenue sur le gestionnaire Twitter Hologram !\nJe vous aide à rédiger, réviser et publier des tweets.\n\nAppuyez sur "Composer un Tweet" pour commencer, ou envoyez-moi un sujet.`,
 
   pt: () =>
-    `Olá! 👋 Eu sou o Holo, seu assistente inteligente na Hologram. Estou aqui para te ajudar a explorar tudo que a Verana e a Hologram oferecem.`,
+    `Bem-vindo ao Hologram Twitter Manager!\nEu ajudo você a compor, revisar e publicar tweets.\n\nToque em "Compor Tweet" para começar, ou me envie um tópico.`,
 }
 
 export const CHATBOT_WELCOME_TEMPLATES = DEFAULT_CHATBOT_WELCOME_TEMPLATES

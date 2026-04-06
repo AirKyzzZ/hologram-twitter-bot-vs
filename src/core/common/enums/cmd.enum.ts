@@ -1,4 +1,13 @@
 export enum Cmd {
   AUTHENTICATE = '/authenticate',
   LOGOUT = '/logout',
+  COMPOSE = '/compose',
+  APPROVE_1 = '/approve_1',
+  APPROVE_2 = '/approve_2',
+  REGENERATE = '/regenerate',
+  EDIT = '/edit',
+  CANCEL = '/cancel',
+  PUBLISH = '/publish',
+  RECENT = '/recent',
+  HELP = '/help',
 }

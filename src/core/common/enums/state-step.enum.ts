@@ -2,4 +2,8 @@ export enum StateStep {
   START,
   AUTH,
   CHAT,
+  COMPOSE,
+  REVIEW_DRAFT,
+  EDIT_DRAFT,
+  CONFIRM_PUBLISH,
 }

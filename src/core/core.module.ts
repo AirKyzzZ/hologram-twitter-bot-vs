@@ -7,11 +7,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { ChatbotModule } from 'src/chatbot/chatbot.module'
 import { MemoryModule } from 'src/memory/memory.module'
 import { AgentContentService } from './agent-content.service'
+import { TwitterModule } from '../twitter/twitter.module'
+import { PostEntity } from '../twitter/models/post.entity'
 
 @Global()
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ConnectionEntity, SessionEntity]),
+    TypeOrmModule.forFeature([ConnectionEntity, SessionEntity, PostEntity]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService): TypeOrmModuleOptions => ({
@@ -21,7 +23,7 @@ import { AgentContentService } from './agent-content.service'
         username: configService.get<string>('appConfig.postgresUser'),
         password: configService.get<string>('appConfig.postgresPassword'),
         database: configService.get<string>('appConfig.postgresDbName'),
-        entities: [ConnectionEntity, SessionEntity],
+        entities: [ConnectionEntity, SessionEntity, PostEntity],
         synchronize: true,
         ssl: false,
         logging: false,
@@ -33,6 +35,7 @@ import { AgentContentService } from './agent-content.service'
     ChatbotModule,
     MemoryModule,
     EventsModule,
+    TwitterModule,
   ],
   controllers: [],
   providers: [CoreService, AgentContentService],

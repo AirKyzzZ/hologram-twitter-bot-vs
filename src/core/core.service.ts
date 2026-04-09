@@ -33,6 +33,8 @@ import { ContentPipelineService } from '../twitter/content-pipeline.service'
 import { TweetValidatorService } from '../twitter/tweet-validator.service'
 import { RateLimitService } from '../twitter/rate-limit.service'
 import { PostEntity, PostStatus } from '../twitter/models/post.entity'
+import { ImageGenerationService } from '../image/image-generation.service'
+import { MinioService } from '../image/minio.service'
 
 @Injectable()
 export class CoreService implements EventHandler, OnModuleInit {
@@ -53,6 +55,8 @@ export class CoreService implements EventHandler, OnModuleInit {
     private readonly contentPipeline: ContentPipelineService,
     private readonly tweetValidator: TweetValidatorService,
     private readonly rateLimitService: RateLimitService,
+    private readonly imageGeneration: ImageGenerationService,
+    private readonly minioService: MinioService,
   ) {
     const baseUrl = configService.get<string>('appConfig.vsAgentAdminUrl') || 'http://localhost:3001'
     this.apiClient = new ApiClient(baseUrl, ApiVersion.V1)
@@ -92,9 +96,16 @@ export class CoreService implements EventHandler, OnModuleInit {
           }
           return
         }
-        case MediaMessage.type:
-          content = 'media'
+        case MediaMessage.type: {
+          const mediaMsg = JsonTransformer.fromJSON(message, MediaMessage) as unknown as MediaMessage
+          const imageItem = (mediaMsg as any).items?.find(
+            (item: any) => typeof item.mimeType === 'string' && item.mimeType.startsWith('image/'),
+          )
+          if (imageItem?.uri) {
+            content = { _type: 'image', uri: imageItem.uri, mimeType: imageItem.mimeType }
+          }
           break
+        }
         case ProfileMessage.type: {
           const inMsg = JsonTransformer.fromJSON(message, ProfileMessage) as unknown as ProfileMessage
           if (inMsg.preferredLanguage) {
@@ -269,6 +280,26 @@ export class CoreService implements EventHandler, OnModuleInit {
         return
       }
 
+      case Cmd.ADD_IMAGE: {
+        if (session.state !== StateStep.REVIEW_DRAFT && session.state !== StateStep.CONFIRM_PUBLISH) return
+        session.state = StateStep.IMAGE_PROMPT
+        await this.sessionRepository.save(session)
+        await this.sendRawText(connectionId, this.getText('IMAGE_PROMPT', lang))
+        await this.sendContextualMenu(session)
+        return
+      }
+
+      case Cmd.REMOVE_IMAGE: {
+        if (!session.draftContext) return
+        session.draftContext.imageUrl = undefined
+        session.draftContext.imageBase64 = undefined
+        session.draftContext.imageMimeType = undefined
+        await this.sessionRepository.save(session)
+        await this.sendRawText(connectionId, this.getText('IMAGE_REMOVED', lang))
+        await this.sendContextualMenu(session)
+        return
+      }
+
       case Cmd.CANCEL: {
         session.state = StateStep.CHAT
         session.draftContext = undefined
@@ -356,8 +387,13 @@ export class CoreService implements EventHandler, OnModuleInit {
           break
         }
 
-        // === REVIEW_DRAFT: text input in this state is ignored (use menu) ===
+        // === REVIEW_DRAFT: text input ignored (use menu), but images accepted ===
         case StateStep.REVIEW_DRAFT: {
+          const imageData = this.extractImageContent(content)
+          if (imageData) {
+            await this.handleUserImage(imageData, session)
+            return session
+          }
           const textContent = this.extractTextContent(content)
           if (textContent) {
             await this.sendRawText(connectionId, this.getText('DRAFT_REVIEW_PROMPT', userLang))
@@ -392,6 +428,24 @@ export class CoreService implements EventHandler, OnModuleInit {
           break
         }
 
+        // === IMAGE_PROMPT: user sends image description or uploads an image ===
+        case StateStep.IMAGE_PROMPT: {
+          // Handle user-uploaded image
+          const imageData = this.extractImageContent(content)
+          if (imageData) {
+            await this.handleUserImage(imageData, session)
+            return session
+          }
+
+          // Handle text input (description or "auto")
+          const textContent = this.extractTextContent(content)
+          if (textContent) {
+            await this.handleImageGeneration(textContent, session)
+            return session
+          }
+          break
+        }
+
         // === AUTH state (from original) ===
         case StateStep.AUTH: {
           if (
@@ -411,9 +465,9 @@ export class CoreService implements EventHandler, OnModuleInit {
 
               const claims = proofItem.claims as { name: string; value: string }[] | undefined
               if (claims) {
-                const firstName = claims.find((c) => c.name === 'firstName')?.value
-                const lastName = claims.find((c) => c.name === 'lastName')?.value
-                session.userName = [firstName, lastName].filter(Boolean).join(' ').trim()
+                const avatarName = claims.find((c) => c.name === 'name')?.value
+                const avatarHandle = claims.find((c) => c.name === 'avatar')?.value
+                session.userName = avatarName || avatarHandle || ''
               }
 
               session.state = StateStep.CHAT
@@ -541,7 +595,16 @@ export class CoreService implements EventHandler, OnModuleInit {
 
     // Publish!
     try {
-      const result = await this.twitterService.publishTweet(content)
+      // Upload image to Twitter if present
+      let mediaIds: string[] | undefined
+      if (session.draftContext?.imageBase64) {
+        const imageBuffer = Buffer.from(session.draftContext.imageBase64, 'base64')
+        const mimeType = session.draftContext.imageMimeType ?? 'image/png'
+        const mediaId = await this.twitterService.uploadMedia(imageBuffer, mimeType)
+        mediaIds = [mediaId]
+      }
+
+      const result = await this.twitterService.publishTweet(content, mediaIds)
       await this.rateLimitService.increment()
 
       // Save published post
@@ -552,6 +615,7 @@ export class CoreService implements EventHandler, OnModuleInit {
         tweetId: result.tweetId,
         tweetUrl: result.tweetUrl,
         connectionId,
+        mediaUrls: session.draftContext?.imageUrl ? [session.draftContext.imageUrl] : undefined,
         publishedTs: new Date(),
       })
       await this.postRepository.save(post)
@@ -682,6 +746,11 @@ export class CoreService implements EventHandler, OnModuleInit {
         if (session.draftContext?.drafts?.length && session.draftContext.drafts.length > 1) {
           items.push({ id: Cmd.APPROVE_2, labelKey: 'APPROVE_DRAFT_2' })
         }
+        if (session.draftContext?.imageUrl) {
+          items.push({ id: Cmd.REMOVE_IMAGE, labelKey: 'REMOVE_IMAGE' })
+        } else {
+          items.push({ id: Cmd.ADD_IMAGE, labelKey: 'ADD_IMAGE' })
+        }
         items.push(
           { id: Cmd.REGENERATE, labelKey: 'REGENERATE' },
           { id: Cmd.EDIT, labelKey: 'EDIT_DRAFT' },
@@ -693,12 +762,24 @@ export class CoreService implements EventHandler, OnModuleInit {
       case StateStep.EDIT_DRAFT:
         return [{ id: Cmd.CANCEL, labelKey: 'CANCEL' }]
 
-      case StateStep.CONFIRM_PUBLISH:
-        return [
+      case StateStep.CONFIRM_PUBLISH: {
+        const items: { id: string; labelKey: string }[] = [
           { id: Cmd.PUBLISH, labelKey: 'PUBLISH' },
+        ]
+        if (session.draftContext?.imageUrl) {
+          items.push({ id: Cmd.REMOVE_IMAGE, labelKey: 'REMOVE_IMAGE' })
+        } else {
+          items.push({ id: Cmd.ADD_IMAGE, labelKey: 'ADD_IMAGE' })
+        }
+        items.push(
           { id: Cmd.EDIT, labelKey: 'EDIT_DRAFT' },
           { id: Cmd.CANCEL, labelKey: 'CANCEL' },
-        ]
+        )
+        return items
+      }
+
+      case StateStep.IMAGE_PROMPT:
+        return [{ id: Cmd.CANCEL, labelKey: 'CANCEL' }]
 
       case StateStep.AUTH:
         return []
@@ -721,6 +802,141 @@ export class CoreService implements EventHandler, OnModuleInit {
       return text.length > 0 ? text : null
     }
     return null
+  }
+
+  // === IMAGE HANDLING ===
+
+  private extractImageContent(content: unknown): { uri: string; mimeType: string } | null {
+    if (
+      typeof content === 'object' &&
+      content !== null &&
+      '_type' in content &&
+      (content as any)._type === 'image'
+    ) {
+      return { uri: (content as any).uri, mimeType: (content as any).mimeType }
+    }
+    return null
+  }
+
+  private async handleImageGeneration(textInput: string, session: SessionEntity): Promise<void> {
+    const { connectionId, lang } = session
+
+    if (!this.imageGeneration.isConfigured) {
+      await this.sendRawText(connectionId, this.getText('IMAGE_NOT_CONFIGURED', lang))
+      session.state = StateStep.REVIEW_DRAFT
+      await this.sessionRepository.save(session)
+      await this.sendContextualMenu(session)
+      return
+    }
+
+    await this.sendRawText(connectionId, this.getText('IMAGE_GENERATING', lang))
+
+    try {
+      // If user types "auto", generate prompt from the tweet draft
+      let imagePrompt = textInput
+      if (textInput.toLowerCase() === 'auto' && session.draftContext?.drafts?.length) {
+        const selectedIdx = session.draftContext.selectedDraft ?? 0
+        const draft = session.draftContext.drafts[selectedIdx] ?? session.draftContext.drafts[0]
+        imagePrompt = await this.imageGeneration.generatePromptFromTweet(draft)
+        this.logger.debug(`Auto-generated image prompt: "${imagePrompt}"`)
+      }
+
+      const imageBuffer = await this.imageGeneration.generate(imagePrompt)
+
+      // Upload to MinIO for preview
+      let imageUrl: string | undefined
+      if (this.minioService.isConfigured) {
+        const uploaded = await this.minioService.upload(imageBuffer, 'image/png', 'png')
+        imageUrl = uploaded.url
+      }
+
+      // Store image data in session
+      if (!session.draftContext) {
+        session.draftContext = { drafts: [], topic: '' }
+      }
+      session.draftContext.imageBase64 = imageBuffer.toString('base64')
+      session.draftContext.imageMimeType = 'image/png'
+      session.draftContext.imageUrl = imageUrl
+
+      // Send preview to user via MediaMessage
+      if (imageUrl) {
+        await this.apiClient.messages.send(
+          new MediaMessage({
+            connectionId,
+            description: 'Generated image preview',
+            items: [
+              {
+                uri: imageUrl,
+                mimeType: 'image/png',
+                filename: 'tweet-image.png',
+                description: 'Preview of image to attach to tweet',
+              },
+            ],
+          } as any),
+        )
+      }
+
+      session.state = StateStep.REVIEW_DRAFT
+      await this.sessionRepository.save(session)
+      await this.sendRawText(connectionId, this.getText('IMAGE_ATTACHED', lang))
+      await this.sendContextualMenu(session)
+    } catch (error) {
+      this.logger.error(`Image generation failed: ${error}`)
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      await this.sendRawText(connectionId, this.getTextWithReplace('IMAGE_FAILED', lang, { error: errorMsg }))
+      session.state = StateStep.REVIEW_DRAFT
+      await this.sessionRepository.save(session)
+      await this.sendContextualMenu(session)
+    }
+  }
+
+  private async handleUserImage(
+    imageData: { uri: string; mimeType: string },
+    session: SessionEntity,
+  ): Promise<void> {
+    const { connectionId, lang } = session
+
+    try {
+      // Download image from URI
+      const response = await fetch(imageData.uri)
+      if (!response.ok) {
+        throw new Error(`Failed to download image: ${response.status}`)
+      }
+      const arrayBuffer = await response.arrayBuffer()
+      const imageBuffer = Buffer.from(arrayBuffer)
+
+      // Upload to MinIO for persistence
+      let imageUrl: string | undefined
+      const extension = imageData.mimeType.split('/')[1] ?? 'png'
+      if (this.minioService.isConfigured) {
+        const uploaded = await this.minioService.upload(imageBuffer, imageData.mimeType, extension)
+        imageUrl = uploaded.url
+      } else {
+        imageUrl = imageData.uri
+      }
+
+      // Store in session
+      if (!session.draftContext) {
+        session.draftContext = { drafts: [], topic: '' }
+      }
+      session.draftContext.imageBase64 = imageBuffer.toString('base64')
+      session.draftContext.imageMimeType = imageData.mimeType
+      session.draftContext.imageUrl = imageUrl
+
+      // Keep current state (don't change from REVIEW_DRAFT/IMAGE_PROMPT)
+      if (session.state === StateStep.IMAGE_PROMPT) {
+        session.state = StateStep.REVIEW_DRAFT
+      }
+      await this.sessionRepository.save(session)
+
+      await this.sendRawText(connectionId, this.getText('IMAGE_RECEIVED', lang))
+      await this.sendContextualMenu(session)
+    } catch (error) {
+      this.logger.error(`Failed to process user image: ${error}`)
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      await this.sendRawText(connectionId, this.getTextWithReplace('IMAGE_FAILED', lang, { error: errorMsg }))
+      await this.sendContextualMenu(session)
+    }
   }
 
   async sendStats(kpi: STAT_KPI, session: SessionEntity) {

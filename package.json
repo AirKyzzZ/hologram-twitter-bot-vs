@@ -65,7 +65,8 @@
     "twitter-api-v2": "^1.29.0",
     "typeorm": "^0.3.24",
     "yaml": "^2.8.1",
-    "zod": "^3.25.51"
+    "zod": "^3.25.51",
+    "minio": "^8.0.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

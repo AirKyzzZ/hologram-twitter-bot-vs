@@ -10,4 +10,6 @@ export enum Cmd {
   PUBLISH = '/publish',
   RECENT = '/recent',
   HELP = '/help',
+  ADD_IMAGE = '/add_image',
+  REMOVE_IMAGE = '/remove_image',
 }

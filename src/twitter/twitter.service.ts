@@ -50,6 +50,17 @@ export class TwitterService implements OnModuleInit {
     return this.handle
   }
 
+  async uploadMedia(buffer: Buffer, mimeType = 'image/png'): Promise<string> {
+    if (!this.client) {
+      throw new Error('Twitter client not configured — cannot upload media.')
+    }
+
+    this.logger.debug(`Uploading media (${mimeType}, ${buffer.length} bytes)...`)
+    const mediaId = await this.client.v1.uploadMedia(buffer, { mimeType })
+    this.logger.log(`Media uploaded: ${mediaId}`)
+    return mediaId
+  }
+
   async publishTweet(content: string, mediaIds?: string[]): Promise<{ tweetId: string; tweetUrl: string }> {
     if (!this.client) {
       throw new Error('Twitter client not configured — cannot publish.')

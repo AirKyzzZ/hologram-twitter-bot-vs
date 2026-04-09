@@ -37,6 +37,15 @@ export const DEFAULT_TRANSLATIONS: Record<string, Record<string, string>> = {
       '- I\'ll generate 2 draft options\n' +
       '- Review, edit, or approve a draft\n' +
       '- Approved tweets are published to Twitter',
+    IMAGE_PROMPT: 'Describe the image you\'d like, or type "auto" to generate one based on the tweet content.\nYou can also send an image directly.',
+    IMAGE_GENERATING: 'Generating image...',
+    IMAGE_ATTACHED: 'Image attached to your draft. You can now publish or make changes.',
+    IMAGE_REMOVED: 'Image removed from draft.',
+    IMAGE_FAILED: 'Image generation failed: {error}',
+    IMAGE_RECEIVED: 'Image received and attached to your draft.',
+    IMAGE_NOT_CONFIGURED: 'Image generation is not enabled. You can still send your own image.',
+    ADD_IMAGE: 'Add Image',
+    REMOVE_IMAGE: 'Remove Image',
     COMPOSE_TWEET: 'Compose Tweet',
     RECENT_TWEETS: 'Recent Tweets',
     APPROVE_DRAFT_1: 'Approve Draft 1',
@@ -82,6 +91,15 @@ export const DEFAULT_TRANSLATIONS: Record<string, Record<string, string>> = {
       '- Je génère 2 options de brouillon\n' +
       '- Révisez, modifiez ou approuvez\n' +
       '- Les tweets approuvés sont publiés sur Twitter',
+    IMAGE_PROMPT: 'Décrivez l\'image souhaitée, ou tapez "auto" pour en générer une à partir du contenu du tweet.\nVous pouvez aussi envoyer une image directement.',
+    IMAGE_GENERATING: 'Génération de l\'image en cours...',
+    IMAGE_ATTACHED: 'Image ajoutée à votre brouillon. Vous pouvez publier ou modifier.',
+    IMAGE_REMOVED: 'Image retirée du brouillon.',
+    IMAGE_FAILED: 'Échec de la génération d\'image : {error}',
+    IMAGE_RECEIVED: 'Image reçue et ajoutée à votre brouillon.',
+    IMAGE_NOT_CONFIGURED: 'La génération d\'images n\'est pas activée. Vous pouvez envoyer votre propre image.',
+    ADD_IMAGE: 'Ajouter une image',
+    REMOVE_IMAGE: 'Retirer l\'image',
     COMPOSE_TWEET: 'Composer un Tweet',
     RECENT_TWEETS: 'Tweets récents',
     APPROVE_DRAFT_1: 'Approuver brouillon 1',
@@ -127,6 +145,15 @@ export const DEFAULT_TRANSLATIONS: Record<string, Record<string, string>> = {
       '- Genero 2 opciones de borrador\n' +
       '- Revisa, edita o aprueba\n' +
       '- Los tweets aprobados se publican en Twitter',
+    IMAGE_PROMPT: 'Describe la imagen que deseas, o escribe "auto" para generar una basada en el contenido del tweet.\nTambién puedes enviar una imagen directamente.',
+    IMAGE_GENERATING: 'Generando imagen...',
+    IMAGE_ATTACHED: 'Imagen adjuntada a tu borrador. Puedes publicar o hacer cambios.',
+    IMAGE_REMOVED: 'Imagen eliminada del borrador.',
+    IMAGE_FAILED: 'Error al generar la imagen: {error}',
+    IMAGE_RECEIVED: 'Imagen recibida y adjuntada a tu borrador.',
+    IMAGE_NOT_CONFIGURED: 'La generación de imágenes no está habilitada. Puedes enviar tu propia imagen.',
+    ADD_IMAGE: 'Agregar imagen',
+    REMOVE_IMAGE: 'Quitar imagen',
     COMPOSE_TWEET: 'Componer Tweet',
     RECENT_TWEETS: 'Tweets recientes',
     APPROVE_DRAFT_1: 'Aprobar borrador 1',

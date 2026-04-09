@@ -6,4 +6,5 @@ export enum StateStep {
   REVIEW_DRAFT,
   EDIT_DRAFT,
   CONFIRM_PUBLISH,
+  IMAGE_PROMPT,
 }

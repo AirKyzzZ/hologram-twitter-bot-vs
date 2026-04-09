@@ -9,6 +9,7 @@ import { MemoryModule } from 'src/memory/memory.module'
 import { AgentContentService } from './agent-content.service'
 import { TwitterModule } from '../twitter/twitter.module'
 import { PostEntity } from '../twitter/models/post.entity'
+import { ImageModule } from '../image/image.module'
 
 @Global()
 @Module({
@@ -36,6 +37,7 @@ import { PostEntity } from '../twitter/models/post.entity'
     MemoryModule,
     EventsModule,
     TwitterModule,
+    ImageModule,
   ],
   controllers: [],
   providers: [CoreService, AgentContentService],

@@ -10,6 +10,7 @@ import { CoreService } from './core/core.service'
 import { CoreModule } from './core/core.module'
 import { MemoryModule } from './memory/memory.module'
 import { TwitterModule } from './twitter/twitter.module'
+import { ImageModule } from './image/image.module'
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { TwitterModule } from './twitter/twitter.module'
     RagModule,
     IntegrationsModule,
     TwitterModule,
+    ImageModule,
     EventsModule.register({
       modules: {
         messages: true,
@@ -42,7 +44,7 @@ import { TwitterModule } from './twitter/twitter.module'
         },
         eventHandler: CoreService,
         url: process.env.VS_AGENT_ADMIN_URL,
-        imports: [ChatbotModule, MemoryModule, TwitterModule],
+        imports: [ChatbotModule, MemoryModule, TwitterModule, ImageModule],
       },
     }),
   ],

@@ -227,6 +227,17 @@ export default registerAs('appConfig', () => ({
   twitterHandle: process.env.TWITTER_HANDLE || '',
   dailyPostBudget: process.env.DAILY_POST_BUDGET || '17',
 
+  // Image Generation
+  imageEnabled: (process.env.IMAGE_ENABLED || 'false').toLowerCase() === 'true',
+
+  // MinIO (S3-compatible storage)
+  minioEndpoint: process.env.MINIO_ENDPOINT || 'minio',
+  minioPort: parseInt(process.env.MINIO_PORT || '9000', 10),
+  minioAccessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
+  minioSecretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+  minioBucket: process.env.MINIO_BUCKET || 'twitter-bot-images',
+  minioPublicUrl: process.env.MINIO_PUBLIC_URL || 'http://localhost:9000',
+
   /**
    * Maximum size (in characters or tokens) for each document chunk when splitting documents
    * for Retrieval-Augmented Generation (RAG) processing.

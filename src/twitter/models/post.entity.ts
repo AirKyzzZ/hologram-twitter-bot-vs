@@ -29,6 +29,9 @@ export class PostEntity {
   @Column({ nullable: true })
   connectionId: string
 
+  @Column({ type: 'jsonb', nullable: true })
+  mediaUrls: string[]
+
   @CreateDateColumn()
   createdTs: Date
 

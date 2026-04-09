@@ -35,5 +35,8 @@ export class SessionEntity {
     drafts: string[]
     topic: string
     selectedDraft?: number
+    imageUrl?: string
+    imageBase64?: string
+    imageMimeType?: string
   }
 }
